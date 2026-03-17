@@ -1,0 +1,52 @@
+package com.br.controller;
+
+import java.util.List;
+import java.net.URI;
+
+import org.springframework.data.domain.Sort;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+
+import com.br.exception.ResourceNotFoundException;
+import com.br.model.Automovel;
+import com.br.repository.AutomovelRepository;
+
+@RestController
+@RequestMapping("/cautomovel")
+@CrossOrigin(origins = "*")
+public class AutomovelController {
+
+    private final AutomovelRepository repository;
+
+    // Injeção por construtor: mais elegante e fácil de testar
+    public AutomovelController(AutomovelRepository repository) {
+        this.repository = repository;
+    }
+
+    @GetMapping("/automovel")
+    public List<Automovel> listar() {
+        return repository.findAll(Sort.by(Sort.Direction.DESC, "codigo"));
+    }
+
+    @GetMapping("/automovel/{id}")
+    public ResponseEntity<Automovel> consultar(@PathVariable Long id) {
+        Automovel automovel = repository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Automóvel não encontrado com o ID: " + id));
+        
+        return ResponseEntity.ok(automovel);
+    }
+
+    @PostMapping("/automovel")
+    public ResponseEntity<Automovel> inserir(@RequestBody Automovel automovel) {
+        Automovel novoAutomovel = repository.save(automovel);
+        
+        // Cria a URI do novo recurso para retornar no cabeçalho "Location"
+        URI uri = ServletUriComponentsBuilder.fromCurrentRequest()
+                .path("/{id}")
+                .buildAndExpand(novoAutomovel.getCodigo()) // Assumi que o ID na sua classe é 'codigo'
+                .toUri();
+
+        return ResponseEntity.created(uri).body(novoAutomovel);
+    }
+}
